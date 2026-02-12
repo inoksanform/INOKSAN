@@ -128,9 +128,12 @@ export default function TicketForm() {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       const isAuthenticated = !!currentUser;
 
-      // 0. Get Regional Manager from Firestore
+      // 0. Get Regional Manager and Global Manager from Firestore
       let regionalManager = "regional.intl@inoksan.com";
+      let globalManagerEmail = "";
+      
       try {
+        // Fetch Regional Manager
         const managerDoc = await getDoc(doc(db, "country_managers", data.country));
         if (managerDoc.exists()) {
           regionalManager = managerDoc.data().manager_email || regionalManager;
@@ -138,8 +141,14 @@ export default function TicketForm() {
           // Fallback to static mapping if document doesn't exist
           regionalManager = getRegionalManager(data.country);
         }
+
+        // Fetch Global Manager Email from settings
+        const settingsDoc = await getDoc(doc(db, "settings", "email"));
+        if (settingsDoc.exists()) {
+          globalManagerEmail = settingsDoc.data().managerEmail || "";
+        }
       } catch (err) {
-        console.error("Error fetching regional manager:", err);
+        console.error("Error fetching managers from Firestore:", err);
         regionalManager = getRegionalManager(data.country);
       }
 
@@ -247,6 +256,7 @@ export default function TicketForm() {
           attachments: attachmentUrls,
           status: "New",
           regionalManager: regionalManager,
+          globalManagerEmail: globalManagerEmail,
           createdAt: serverTimestamp(),
           emailStatus: 'pending',
           emailHistory: []

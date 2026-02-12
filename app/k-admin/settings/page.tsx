@@ -8,11 +8,6 @@ import { db } from '@/lib/firebase';
 export default function SettingsPage() {
   const [managerEmail, setManagerEmail] = useState('');
   const [forwardingEmail, setForwardingEmail] = useState('');
-  const [countries, setCountries] = useState([
-    { code: 'TR', name: 'Turkey', email: 'support.tr@inoksan.com', enabled: true },
-    { code: 'UK', name: 'United Kingdom', email: 'support.uk@inoksan.com', enabled: true },
-    { code: 'DE', name: 'Germany', email: 'support.de@inoksan.com', enabled: true },
-  ]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testEmail, setTestEmail] = useState('');
@@ -30,9 +25,6 @@ export default function SettingsPage() {
         const data = settingsDoc.data();
         setManagerEmail(data.managerEmail || 'manager@inoksan.com');
         setForwardingEmail(data.forwardingEmail || '');
-        if (data.countries) {
-          setCountries(data.countries);
-        }
       } else {
         // Default settings
         setManagerEmail('manager@inoksan.com');
@@ -50,7 +42,6 @@ export default function SettingsPage() {
       await setDoc(doc(db, 'settings', 'email'), {
         managerEmail,
         forwardingEmail,
-        countries,
         updatedAt: new Date()
       });
       alert('Settings saved successfully!');
@@ -62,25 +53,6 @@ export default function SettingsPage() {
     }
   };
 
-  const addCountry = () => {
-    setCountries([...countries, { 
-      code: '', 
-      name: '', 
-      email: '', 
-      enabled: true 
-    }]);
-  };
-
-  const updateCountry = (index: number, field: string, value: any) => {
-    const updated = [...countries];
-    updated[index] = { ...updated[index], [field]: value };
-    setCountries(updated);
-  };
-
-  const removeCountry = (index: number) => {
-    setCountries(countries.filter((_, i) => i !== index));
-  };
-
   const sendTestEmail = async () => {
     if (!testEmail) {
       alert('Please enter a test email address');
@@ -88,34 +60,38 @@ export default function SettingsPage() {
     }
 
     try {
-      const response = await fetch('/api/send-email', {
+      setSaving(true);
+      const response = await fetch('/api/brevo-send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ticketId: 'TEST-001',
-          companyName: 'Test Company',
-          equipmentType: 'Test Equipment',
-          issueDescription: 'This is a test email to verify email forwarding settings.',
-          contactPerson: 'Test User',
-          phoneNumber: '+1234567890',
-          country: 'TR',
+          ticketId: 'TEST-CONNECTION',
+          companyName: 'Inoksan Test',
+          contactPerson: 'Admin User',
+          email: testEmail,
+          subject: 'Test Connection - Brevo Email Service',
+          description: 'This is a test email to verify your Brevo configuration.',
           priority: 'Normal',
-          toEmail: testEmail,
-          isTest: true
+          country: 'Turkey',
+          emailType: 'customer_confirmation'
         }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        alert('Test email sent successfully!');
+        alert('Test email sent successfully via Brevo!');
         setTestEmail('');
       } else {
-        alert('Error sending test email. Please check your settings.');
+        alert(`Error sending test email: ${data.error || 'Check Netlify logs for details'}`);
       }
     } catch (error) {
       console.error('Error sending test email:', error);
-      alert('Error sending test email.');
+      alert('Error sending test email. Check console for details.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -216,7 +192,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Country Specific Routing */}
+      {/* Regional Support Routing Information */}
       <div className="bg-[#2C2F36] rounded-xl border border-gray-700 overflow-hidden">
         <div className="p-6 border-b border-gray-700 flex justify-between items-center">
           <div>
@@ -224,85 +200,39 @@ export default function SettingsPage() {
               <Globe className="h-5 w-5 text-blue-400" />
               Regional Support Routing
             </h2>
-            <p className="text-sm text-gray-400 mt-1">Route tickets to specific teams based on location (CC'd to forwarding email)</p>
+            <p className="text-sm text-gray-400 mt-1">Managed directly in Firestore <code>country_managers</code> collection</p>
           </div>
-          <button 
-            onClick={addCountry}
-            className="text-[#ee3035] hover:text-white text-sm font-medium flex items-center gap-1 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add Region
-          </button>
         </div>
         
-        <div className="divide-y divide-gray-700">
-          {countries.map((country, index) => (
-            <div key={index} className="p-6 flex items-center gap-4 group hover:bg-[#3A3D45] transition-colors">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={country.enabled}
-                  onChange={(e) => updateCountry(index, 'enabled', e.target.checked)}
-                  className="rounded border-gray-600 text-[#ee3035] focus:ring-[#ee3035]"
-                />
+        <div className="p-6">
+          <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg p-4 mb-4">
+            <div className="flex gap-3">
+              <Info className="h-5 w-5 text-blue-400 shrink-0" />
+              <div className="text-sm text-blue-100">
+                <p className="font-semibold mb-1">Direct Collection Fetching Enabled</p>
+                <p>Regional manager emails are now fetched directly from the <code>country_managers</code> collection in Firestore based on the country name.</p>
               </div>
-              
-              <div className="flex-1 grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Country Code</label>
-                  <input 
-                    type="text" 
-                    value={country.code}
-                    onChange={(e) => updateCountry(index, 'code', e.target.value.toUpperCase())}
-                    placeholder="TR"
-                    className="w-full bg-[#3A3D45] text-white px-3 py-2 rounded border border-gray-600 focus:border-[#ee3035] outline-none text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Country Name</label>
-                  <input 
-                    type="text" 
-                    value={country.name}
-                    onChange={(e) => updateCountry(index, 'name', e.target.value)}
-                    placeholder="Turkey"
-                    className="w-full bg-[#3A3D45] text-white px-3 py-2 rounded border border-gray-600 focus:border-[#ee3035] outline-none text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Support Email</label>
-                  <input 
-                    type="email" 
-                    value={country.email}
-                    onChange={(e) => updateCountry(index, 'email', e.target.value)}
-                    placeholder="support.tr@inoksan.com"
-                    className="w-full bg-[#3A3D45] text-white px-3 py-2 rounded border border-gray-600 focus:border-[#ee3035] outline-none text-sm"
-                  />
-                </div>
-              </div>
-              
-              <button 
-                onClick={() => removeCountry(index)}
-                className="opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-[#ee3035] transition-all"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
             </div>
-          ))}
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300">To manage regional routing, please edit the <code>country_managers</code> collection in your Firebase console:</p>
+            <div className="bg-[#1A1C21] p-4 rounded-lg font-mono text-xs text-gray-400 space-y-2">
+              <p className="text-gray-200">// Example Document Structure</p>
+              <p>Collection: <span className="text-blue-400">country_managers</span></p>
+              <p>Document ID: <span className="text-green-400">"Austria"</span></p>
+              <p>Fields:</p>
+              <p className="pl-4">manager_email: <span className="text-orange-400">"bora.kara@inoksan.com.tr"</span></p>
+            </div>
+          </div>
         </div>
         
         <div className="p-4 bg-[#3A3D45]/30">
           <div className="flex justify-between items-center">
             <p className="text-xs text-gray-500">
-              Changes to routing rules take effect immediately. Disabled regions will not receive CC emails.
+              Changes made in the Firebase console take effect immediately.
             </p>
             <div className="flex gap-3">
-              <button 
-                onClick={loadSettings}
-                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset
-              </button>
               <button 
                 onClick={saveSettings}
                 disabled={saving}

@@ -49,8 +49,8 @@ export async function POST(request: Request) {
       toEmail: toEmail
     };
 
-    // Call the send-email API
-    const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/send-email`, {
+    // Call the brevo-send API instead of the old send-email API
+    const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/brevo-send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(emailData)

@@ -514,6 +514,22 @@ function createTicketEmailTemplate(data: any): string {
 
 export async function POST(request: Request) {
   try {
+    const apiKey = process.env.BREVO_API_KEY;
+    const senderEmail = process.env.BREVO_SENDER_EMAIL;
+
+    if (!apiKey) {
+      console.error('CRITICAL: BREVO_API_KEY is not defined in environment variables');
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Email service configuration missing (API Key)',
+        code: 'CONFIG_ERROR'
+      }, { status: 500 });
+    }
+
+    if (!senderEmail) {
+      console.warn('WARNING: BREVO_SENDER_EMAIL is not defined, using fallback: noreply@inoksan.com');
+    }
+
     const {
       ticketId,
       email,
@@ -544,25 +560,42 @@ export async function POST(request: Request) {
 
     // Fetch manager emails from Firebase for CC
     let ccEmails: string[] = [];
+    let fetchedRegionalManager = regionalManager;
+
     try {
+      // 1. Fetch Regional Manager from country_managers collection directly
+      // This fulfills the requirement: "it should be fetched from the table directly"
+      if (country) {
+        const countryManagerDoc = await getDoc(doc(db, 'country_managers', country));
+        if (countryManagerDoc.exists()) {
+          const managerData = countryManagerDoc.data();
+          if (managerData.manager_email) {
+            fetchedRegionalManager = managerData.manager_email;
+            console.log(`Fetched regional manager for ${country}: ${fetchedRegionalManager}`);
+          }
+        }
+      }
+
+      // 2. Add the fetched (or passed) regional manager to CC
+      if (fetchedRegionalManager && fetchedRegionalManager.includes('@') && !ccEmails.includes(fetchedRegionalManager)) {
+        ccEmails.push(fetchedRegionalManager);
+      }
+
       const settingsDoc = await getDoc(doc(db, 'settings', 'email'));
       if (settingsDoc.exists()) {
         const settingsData = settingsDoc.data();
         
-        // Add export manager email
-        if (settingsData.managerEmail) {
+        // 3. Add global manager email from settings
+        if (settingsData.managerEmail && !ccEmails.includes(settingsData.managerEmail)) {
           ccEmails.push(settingsData.managerEmail);
         }
         
-        // Find regional manager for the country
-        if (settingsData.countries && Array.isArray(settingsData.countries)) {
-          const countrySettings = settingsData.countries.find((c: any) => c.code === country || c.name === country);
-          if (countrySettings && countrySettings.regionalManager) {
-            ccEmails.push(countrySettings.regionalManager);
-          }
+        // 4. Add forwarding email (backup support email)
+        if (settingsData.forwardingEmail && !ccEmails.includes(settingsData.forwardingEmail)) {
+          ccEmails.push(settingsData.forwardingEmail);
         }
       }
-      console.log('CC emails found:', ccEmails);
+      console.log('Final CC emails list:', ccEmails);
     } catch (firebaseError) {
       console.error('Error fetching CC emails from Firebase:', firebaseError);
     }
@@ -582,7 +615,7 @@ export async function POST(request: Request) {
         priority,
         country,
         equipmentType,
-        regionalManager,
+        regionalManager: fetchedRegionalManager,
         customerEmail: customerEmail || email,
         attachments: attachments || [],
         equipmentSerialNo,
@@ -601,7 +634,7 @@ export async function POST(request: Request) {
         priority,
         country,
         equipmentType,
-        regionalManager,
+        regionalManager: fetchedRegionalManager,
         customerEmail: customerEmail || email
       });
       textContent = `New regional ticket ${ticketId} from ${companyName} in ${country}. Customer: ${customerEmail || email}`;
@@ -617,7 +650,7 @@ export async function POST(request: Request) {
         priority,
         country,
         equipmentType,
-        regionalManager,
+        regionalManager: fetchedRegionalManager,
         attachments: attachments || [],
         equipmentSerialNo,
         orderInvoiceNo,
