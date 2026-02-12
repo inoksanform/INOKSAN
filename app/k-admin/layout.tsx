@@ -2,12 +2,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { LayoutDashboard, MessageSquare, Settings, LogOut } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   return (
     <div className="min-h-screen bg-[#3A3D45] flex">
       {/* Sidebar */}
@@ -27,7 +29,11 @@ export default function AdminLayout({
         <nav className="flex-1 p-4 space-y-2">
           <Link 
             href="/k-admin" 
-            className="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-[#ee3035] hover:text-white rounded-lg transition-colors"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              pathname === '/k-admin' 
+                ? 'bg-[#ee3035] text-white' 
+                : 'text-gray-300 hover:bg-[#ee3035] hover:text-white'
+            }`}
           >
             <LayoutDashboard className="h-5 w-5" />
             <span className="font-medium">Dashboard</span>
@@ -35,7 +41,11 @@ export default function AdminLayout({
           
           <Link 
             href="/k-admin/messages" 
-            className="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-[#ee3035] hover:text-white rounded-lg transition-colors"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              pathname === '/k-admin/messages' 
+                ? 'bg-[#ee3035] text-white' 
+                : 'text-gray-300 hover:bg-[#ee3035] hover:text-white'
+            }`}
           >
             <MessageSquare className="h-5 w-5" />
             <span className="font-medium">Messages</span>
@@ -43,7 +53,11 @@ export default function AdminLayout({
           
           <Link 
             href="/k-admin/settings" 
-            className="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-[#ee3035] hover:text-white rounded-lg transition-colors"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              pathname === '/k-admin/settings' 
+                ? 'bg-[#ee3035] text-white' 
+                : 'text-gray-300 hover:bg-[#ee3035] hover:text-white'
+            }`}
           >
             <Settings className="h-5 w-5" />
             <span className="font-medium">Settings</span>
