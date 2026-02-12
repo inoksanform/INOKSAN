@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { Upload, X, Loader2, CheckCircle, AlertCircle, Building2, User as UserIcon, Mail, Globe, FileText, Hash, Tag, AlertTriangle, Layers, MessageSquare, Info } from "lucide-react";
 import { clsx } from "clsx";
 import { db } from "@/lib/firebase";
-import { doc, runTransaction, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, runTransaction, serverTimestamp, updateDoc, getDoc } from "firebase/firestore";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -124,14 +124,19 @@ export default function TicketForm() {
     setEmailWarning(null);
 
     try {
-      // Check authentication before upload
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      console.log('Current user:', currentUser);
-      
-      // Allow uploads even without authentication (public bucket with RLS)
-      const isAuthenticated = !!currentUser;
-      if (!isAuthenticated) {
-        console.warn('User not authenticated, but attempting upload anyway (public bucket)');
+      // 0. Get Regional Manager from Firestore
+      let regionalManager = "regional.intl@inoksan.com";
+      try {
+        const managerDoc = await getDoc(doc(db, "country_managers", data.country));
+        if (managerDoc.exists()) {
+          regionalManager = managerDoc.data().manager_email || regionalManager;
+        } else {
+          // Fallback to static mapping if document doesn't exist
+          regionalManager = getRegionalManager(data.country);
+        }
+      } catch (err) {
+        console.error("Error fetching regional manager:", err);
+        regionalManager = getRegionalManager(data.country);
       }
 
       // 1. Upload files to Supabase
@@ -231,7 +236,6 @@ export default function TicketForm() {
         
         // Create ticket document with custom ID
         const ticketRef = doc(db, "tickets", newTicketId);
-        const regionalManager = getRegionalManager(data.country);
         
         transaction.set(ticketRef, {
           ...data,
@@ -248,8 +252,6 @@ export default function TicketForm() {
       // 3. Send Emails via Brevo (Server-side)
       console.log('Starting Brevo email sending process for ticket:', newTicketId);
       try {
-        const regionalManager = getRegionalManager(data.country);
-        
         // Send ONLY ONE email to customer with CC to admin and regional manager
         const emailRes = await fetch('/api/brevo-send', {
           method: 'POST',
