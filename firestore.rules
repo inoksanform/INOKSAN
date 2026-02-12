@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Tickets:
+    // - Create: Public (anyone can submit a ticket)
+    // - Read/Update: Public for now (so the hidden dashboard works) - SHOULD BE RESTRICTED IN PRODUCTION
+    match /tickets/{ticketId} {
+      allow create: if true;
+      allow read, update: if true; 
+    }
+
+    // Counters:
+    // - Read/Write: Public for now to allow ticket ID generation
+    match /counters/{counterId} {
+      allow read, write: if true;
+    }
+
+    // Country Managers:
+    match /country_managers/{countryId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
