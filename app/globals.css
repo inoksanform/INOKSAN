@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+  --primary: #ee3035;
+  --secondary: #f3f4f6;
+  --muted: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Keeping dark mode option but defaulting to light if system prefers, 
+       but user requested "design fix" implying the dark theme was the issue. 
+       I will make dark mode identical to light or just standard dark mode. 
+       For now, let's keep a standard dark mode but ensure the site overrides it if needed 
+       or just stick to one corporate theme (Light). 
+       Most corporate sites don't do auto-dark mode. I'll stick to Light for consistency. */
+    --background: #ffffff;
+    --foreground: #111827;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
