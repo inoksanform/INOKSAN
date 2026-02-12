@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Mail, Globe, UserCheck, Send, RotateCcw } from 'lucide-react';
+import { Save, Mail, Globe, UserCheck, Send, Info } from 'lucide-react';
 import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
