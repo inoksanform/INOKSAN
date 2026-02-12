@@ -48,8 +48,13 @@ async function sendBrevoEmail(emailData: BrevoEmailData): Promise<any> {
     payload.cc = emailData.cc.map(email => ({ email }));
   }
 
-  console.log('Sending to Brevo API with payload:', JSON.stringify(payload, null, 2));
-  console.log('Using API key:', apiKey.substring(0, 10) + '...');
+  console.log('Sending to Brevo API with payload summary:', { 
+    to: emailData.to, 
+    subject: emailData.subject, 
+    ccCount: emailData.cc?.length || 0,
+    ccList: emailData.cc
+  });
+  console.log('Using API key (first 10 chars):', apiKey.substring(0, 10) + '...');
 
   try {
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
