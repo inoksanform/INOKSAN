@@ -45,36 +45,6 @@ const COUNTRIES = [
   "United Arab Emirates", "Saudi Arabia", "Egypt", "South Africa", "Other"
 ];
 
-// Regional manager mapping based on country
-const getRegionalManager = (country: string): string => {
-  const regionalManagers: { [key: string]: string } = {
-    "Turkey": "regional.tr@inoksan.com",
-    "United Kingdom": "regional.uk@inoksan.com",
-    "Germany": "regional.de@inoksan.com",
-    "United States": "regional.us@inoksan.com",
-    "France": "regional.fr@inoksan.com",
-    "Italy": "regional.it@inoksan.com",
-    "Spain": "regional.es@inoksan.com",
-    "Netherlands": "regional.nl@inoksan.com",
-    "Russia": "regional.ru@inoksan.com",
-    "China": "regional.cn@inoksan.com",
-    "Japan": "regional.jp@inoksan.com",
-    "South Korea": "regional.kr@inoksan.com",
-    "India": "regional.in@inoksan.com",
-    "Brazil": "regional.br@inoksan.com",
-    "Mexico": "regional.mx@inoksan.com",
-    "Canada": "regional.ca@inoksan.com",
-    "Australia": "regional.au@inoksan.com",
-    "United Arab Emirates": "regional.ae@inoksan.com",
-    "Saudi Arabia": "regional.sa@inoksan.com",
-    "Egypt": "regional.eg@inoksan.com",
-    "South Africa": "regional.za@inoksan.com",
-    "Other": "regional.intl@inoksan.com"
-  };
-  
-  return regionalManagers[country] || "regional.intl@inoksan.com";
-};
-
 export default function TicketForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -133,13 +103,12 @@ export default function TicketForm() {
       let globalManagerEmail = "";
       
       try {
-        // Fetch Regional Manager
-        const managerDoc = await getDoc(doc(db, "country_managers", data.country));
-        if (managerDoc.exists()) {
-          regionalManager = managerDoc.data().manager_email || regionalManager;
-        } else {
-          // Fallback to static mapping if document doesn't exist
-          regionalManager = getRegionalManager(data.country);
+        // Fetch Regional Manager directly from country_managers collection
+        if (data.country) {
+          const managerDoc = await getDoc(doc(db, "country_managers", data.country));
+          if (managerDoc.exists()) {
+            regionalManager = managerDoc.data().manager_email || regionalManager;
+          }
         }
 
         // Fetch Global Manager Email from settings
@@ -149,7 +118,6 @@ export default function TicketForm() {
         }
       } catch (err) {
         console.error("Error fetching managers from Firestore:", err);
-        regionalManager = getRegionalManager(data.country);
       }
 
       // 1. Upload files to Supabase
