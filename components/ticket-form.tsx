@@ -124,6 +124,10 @@ export default function TicketForm() {
     setEmailWarning(null);
 
     try {
+      // Check authentication before upload
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const isAuthenticated = !!currentUser;
+
       // 0. Get Regional Manager from Firestore
       let regionalManager = "regional.intl@inoksan.com";
       try {
