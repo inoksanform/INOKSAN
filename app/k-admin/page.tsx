@@ -34,6 +34,7 @@ type Ticket = {
   issueType?: string;
   salesmanName?: string;
   regionalManager?: string;
+  attachmentUrls?: string[];
 };
 
 type DashboardStats = {
@@ -557,8 +558,8 @@ export default function AdminDashboard() {
             </thead>
             <tbody>
               {(() => {
-                const withAttachments = tickets.filter(t => t.attachments && t.attachments.length > 0).length;
-                const withoutAttachments = tickets.filter(t => !t.attachments || t.attachments.length === 0).length;
+                const withAttachments = tickets.filter(t => t.attachmentUrls && t.attachmentUrls.length > 0).length;
+                const withoutAttachments = tickets.filter(t => !t.attachmentUrls || t.attachmentUrls.length === 0).length;
                 const total = tickets.length;
                 
                 return [
