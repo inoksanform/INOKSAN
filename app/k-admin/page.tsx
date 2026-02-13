@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Building2,
   User,
-  UserCheck
+  UserCheck,
+  Paperclip
 } from 'lucide-react';
 
 type Ticket = {
@@ -280,6 +281,15 @@ export default function AdminDashboard() {
               onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
               className="bg-[#3A3D45] text-white border border-gray-600 rounded px-2 py-1 text-sm outline-none focus:border-[#ee3035]"
             />
+            <button 
+              onClick={() => setDateRange({
+                start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+                end: new Date().toISOString().split('T')[0]
+              })}
+              className="bg-[#3A3D45] text-white border border-gray-600 rounded px-3 py-1 text-sm hover:bg-[#2C2F36] transition-colors"
+            >
+              Reset
+            </button>
             <span className="text-gray-400 text-sm">To:</span>
             <input 
               type="date" 
@@ -300,19 +310,12 @@ export default function AdminDashboard() {
       </header>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard 
           title="Total Tickets" 
           value={stats.totalTickets.toLocaleString()} 
           subtext="In selected range"
           icon={<BarChart3 className="h-6 w-6 text-blue-400" />} 
-        />
-        <StatCard 
-          title="Open Issues" 
-          value={stats.openTickets.toString()} 
-          subtext="Requires attention"
-          isNegative={stats.openTickets > 10}
-          icon={<AlertCircle className="h-6 w-6 text-[#ee3035]" />} 
         />
         <StatCard 
           title="Critical / High Priority" 
@@ -424,38 +427,80 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Top Salesmen */}
+        {/* Issue Type Chart */}
         <div className="bg-[#2C2F36] p-6 rounded-xl border border-gray-700">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <User className="h-5 w-5 text-green-400" />
-            Top Salesmen
+            <Tag className="h-5 w-5 text-green-400" />
+            Issue Types Distribution
           </h3>
-          <div className="space-y-4">
-            {stats.topSalesmen.map((salesman, index) => (
-              <div key={salesman.salesman} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-white w-8">#{index + 1}</span>
-                  <span className="text-gray-300 truncate max-w-[120px]" title={salesman.salesman}>{salesman.salesman}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-20 h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="space-y-3">
+            {(() => {
+              const issueCounts: { [key: string]: number } = {};
+              tickets.forEach(t => {
+                const type = t.issueType || 'Other';
+                issueCounts[type] = (issueCounts[type] || 0) + 1;
+              });
+              const sortedIssues = Object.entries(issueCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6);
+              const maxCount = Math.max(...sortedIssues.map(([, count]) => count), 1);
+              
+              return sortedIssues.map(([issue, count]) => (
+                <div key={issue} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300 truncate">{issue}</span>
+                    <span className="text-gray-400">{count}</span>
+                  </div>
+                  <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-green-500 rounded-full" 
-                      style={{ width: `${(salesman.count / Math.max(...stats.topSalesmen.map(s => s.count), 1)) * 100}%` }}
+                      className="h-full bg-green-500 rounded-full transition-all" 
+                      style={{ width: `${(count / maxCount) * 100}%` }}
                     ></div>
                   </div>
-                  <span className="text-sm text-gray-400 w-12 text-right">{salesman.count}</span>
-                  {salesman.openTickets > 0 && (
-                    <span className="text-xs text-yellow-400">({salesman.openTickets} open)</span>
-                  )}
                 </div>
-              </div>
-            ))}
-            {stats.topSalesmen.length === 0 && (
-              <div className="text-center text-gray-500 py-8">
-                No data available for this period
-              </div>
-            )}
+              ));
+            })()}
+          </div>
+        </div>
+
+        {/* Priority Chart */}
+        <div className="bg-[#2C2F36] p-6 rounded-xl border border-gray-700">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-400" />
+            Priority Distribution
+          </h3>
+          <div className="space-y-3">
+            {(() => {
+              const priorityCounts: { [key: string]: number } = {};
+              tickets.forEach(t => {
+                const priority = t.priority || 'Normal';
+                priorityCounts[priority] = (priorityCounts[priority] || 0) + 1;
+              });
+              const sortedPriorities = Object.entries(priorityCounts)
+                .sort((a, b) => b[1] - a[1]);
+              const maxCount = Math.max(...sortedPriorities.map(([, count]) => count), 1);
+              
+              return sortedPriorities.map(([priority, count]) => (
+                <div key={priority} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300 truncate">{priority}</span>
+                    <span className="text-gray-400">{count}</span>
+                  </div>
+                  <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all ${
+                        priority === 'High' || priority === 'Critical' || priority === 'Urgent (equipment stopped)' 
+                          ? 'bg-red-500' 
+                          : priority === 'Medium' 
+                          ? 'bg-yellow-500' 
+                          : 'bg-blue-500'
+                      }`}
+                      style={{ width: `${(count / maxCount) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         </div>
 
@@ -470,7 +515,7 @@ export default function AdminDashboard() {
               <div key={manager.manager} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-white w-8">#{index + 1}</span>
-                  <span className="text-gray-300 truncate max-w-[120px]" title={manager.manager}>{manager.manager}</span>
+                  <span className="text-gray-300 truncate max-w-[200px]" title={manager.manager}>{manager.manager}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-20 h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -492,6 +537,56 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Attachments Summary Table */}
+      <div className="bg-[#2C2F36] p-6 rounded-xl border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Paperclip className="h-5 w-5 text-blue-400" />
+          Tickets with Attachments Summary
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-600">
+                <th className="text-left py-3 px-4 text-gray-300">Category</th>
+                <th className="text-right py-3 px-4 text-gray-300">Count</th>
+                <th className="text-right py-3 px-4 text-gray-300">Percentage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const withAttachments = tickets.filter(t => t.attachments && t.attachments.length > 0).length;
+                const withoutAttachments = tickets.filter(t => !t.attachments || t.attachments.length === 0).length;
+                const total = tickets.length;
+                
+                return [
+                  {
+                    category: 'With Attachments',
+                    count: withAttachments,
+                    percentage: total > 0 ? ((withAttachments / total) * 100).toFixed(1) : '0.0'
+                  },
+                  {
+                    category: 'Without Attachments', 
+                    count: withoutAttachments,
+                    percentage: total > 0 ? ((withoutAttachments / total) * 100).toFixed(1) : '0.0'
+                  },
+                  {
+                    category: 'Total Tickets',
+                    count: total,
+                    percentage: '100.0'
+                  }
+                ].map((row, index) => (
+                  <tr key={row.category} className={`${index < 2 ? 'border-b border-gray-700' : ''}`}>
+                    <td className="py-3 px-4 text-gray-300">{row.category}</td>
+                    <td className="py-3 px-4 text-right text-white font-medium">{row.count}</td>
+                    <td className="py-3 px-4 text-right text-gray-400">{row.percentage}%</td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
